@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
-import RefreshToken from "../models/refreshToken.js";
+import RefreshToken from "../models/refreshTokenModel.js";
 import dotenv from "dotenv";
 
 dotenv.config();
