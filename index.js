@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
 import dotenv from "dotenv";
+import sequelize from "./config/database.js";
 
 const app = express();
 dotenv.config();
@@ -10,6 +11,11 @@ app.use(cors());
 
 // Middleware untuk parsing request body
 app.use(bodyParser.json());
+
+// Sync Sequelize models with database (create tables if not exists)
+sequelize.sync().then(() => {
+  console.log("Database synced");
+});
 
 // Jalankan server
 app.listen(process.env.PORT, () => {
