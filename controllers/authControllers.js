@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import User from "../models/userModel.js";
+import RefreshToken from "../models/refreshToken.js";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -10,18 +11,37 @@ const generateAccessToken = (user) => {
     { userId: user.id, email: user.email },
     process.env.JWT_SECRET,
     {
-      expiresIn: process.env.JWT_EXPIRATION_TIME,
+      expiresIn: process.env.JWT_EXPIRATION_TIME + "h",
     }
   );
 };
 
 // Generate Refresh Token
-const generateRefreshToken = (user) => {
-  return jwt.sign(
+const generateRefreshToken = async (user) => {
+  // Menghasilkan refresh token dengan waktu kedaluwarsa
+  const expirationTime = new Date();
+  expirationTime.setDate(
+    expirationTime.getDate() + process.env.JWT_REFRESH_EXPIRATION_TIME
+  ); // Misalnya, 7 hari dari sekarang
+
+  const refreshToken = jwt.sign(
     { userId: user.id, email: user.email },
     process.env.JWT_REFRESH_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME }
+    { expiresIn: process.env.JWT_REFRESH_EXPIRATION_TIME + "d" }
   );
+
+  // Simpan refresh token ke database dengan waktu kedaluwarsa
+  try {
+    await RefreshToken.create({
+      userId: user.id,
+      refreshToken: refreshToken,
+      expirationTime: expirationTime, // Menyimpan waktu kedaluwarsa
+    });
+
+    return refreshToken;
+  } catch (error) {
+    return error;
+  }
 };
 
 // Register User
@@ -76,8 +96,15 @@ export const login = async (req, res) => {
     if (!isPasswordValid)
       return res.status(400).json({ message: "Invalid password" });
 
+    // Hapus refresh token dari database yang cocok dengan userId
+    await RefreshToken.destroy({
+      where: {
+        userId: user.id,
+      },
+    });
+
     const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
+    const refreshToken = await generateRefreshToken(user);
 
     return res.json({ accessToken, refreshToken });
   } catch (err) {
@@ -87,19 +114,52 @@ export const login = async (req, res) => {
 };
 
 // Refresh Token
-export const refresh = (req, res) => {
+export const refresh = async (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    return res.status(401).json({ message: "Refresh token is required" });
+    return res.status(400).json({ message: "Refresh token is required" });
   }
 
-  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ message: "Invalid refresh token" });
+  try {
+    // Cari refresh token di database
+    const tokenRecord = await RefreshToken.findOne({ where: { refreshToken } });
+
+    // Jika refresh token tidak ditemukan
+    if (!tokenRecord) {
+      return res.status(401).json({ message: "Invalid refresh token, please login again" });
     }
 
+    // Periksa apakah refresh token sudah kedaluwarsa
+    const currentTime = new Date();
+    if (currentTime > tokenRecord.expirationTime) {
+      // Jika token sudah kedaluwarsa, hapus token dari database
+      await RefreshToken.destroy({ where: { refreshToken } });
+      return res
+        .status(401)
+        .json({ message: "Refresh token has expired, please login again" });
+    }
+
+    // Verifikasi refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    // Cari user berdasarkan ID yang ada di dalam refresh token
+    const user = await User.findOne({ where: { id: decoded.userId } });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Buat access token baru
     const newAccessToken = generateAccessToken(user);
+
+    // hapus dulu refreshToken lama
+    await RefreshToken.destroy({ where: { refreshToken } });
+
+    // Kembalikan new access token ke client
     res.json({ accessToken: newAccessToken });
-  });
+  } catch (err) {
+    console.error("Error refreshing access token:", err);
+    res.status(500).json({ message: "Failed to refresh access token" });
+  }
 };
