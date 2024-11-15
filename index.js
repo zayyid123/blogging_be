@@ -4,6 +4,9 @@ import cors from "cors";
 import dotenv from "dotenv";
 import sequelize from "./config/database.js";
 
+// routes
+import authRoutes from "./routes/authRoutes.js";
+
 const app = express();
 dotenv.config();
 
@@ -11,6 +14,9 @@ app.use(cors());
 
 // Middleware untuk parsing request body
 app.use(bodyParser.json());
+
+// Routes
+app.use("/api/auth", authRoutes);
 
 // Sync Sequelize models with database (create tables if not exists)
 sequelize.sync().then(() => {
