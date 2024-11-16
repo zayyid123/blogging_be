@@ -1,4 +1,5 @@
 import Blog from "../models/blogModel.js";
+import CustomError from "../utils/customError.js";
 import errorHandler from "../utils/errorHandling.js";
 
 // get all blog
@@ -20,6 +21,23 @@ export const getAllBlogByUser = async (req, res) => {
     const blog = await Blog.findAll({
       where: { userId: userId },
     });
+
+    return res.json(blog);
+  } catch (error) {
+    errorHandler(error, res);
+  }
+};
+
+export const getDetailBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const blog = await Blog.findOne({ where: { id } });
+
+    // is blog exist
+    if (!blog) {
+      throw new CustomError("Blog doesn't exist", 400);
+    }
 
     return res.json(blog);
   } catch (error) {
