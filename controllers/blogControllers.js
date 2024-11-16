@@ -1,6 +1,32 @@
 import Blog from "../models/blogModel.js";
 import errorHandler from "../utils/errorHandling.js";
 
+// get all blog
+export const getAllBlog = async (req, res) => {
+  try {
+    const blog = await Blog.findAll();
+
+    return res.json(blog);
+  } catch (error) {
+    errorHandler(error, res);
+  }
+};
+
+// get all blog
+export const getAllBlogByUser = async (req, res) => {
+  try {
+    const { userId } = req.user;
+
+    const blog = await Blog.findAll({
+      where: { userId: userId },
+    });
+
+    return res.json(blog);
+  } catch (error) {
+    errorHandler(error, res);
+  }
+};
+
 // create Blog
 export const createBlog = async (req, res) => {
   try {
@@ -17,17 +43,6 @@ export const createBlog = async (req, res) => {
     return res
       .status(201)
       .json({ message: "Blog created successfully", blog: newBlog });
-  } catch (error) {
-    errorHandler(error, res);
-  }
-};
-
-// get all blog
-export const getAllBlog = async (req, res) => {
-  try {
-    const blog = await Blog.findAll();
-
-    return res.json(blog);
   } catch (error) {
     errorHandler(error, res);
   }

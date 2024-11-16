@@ -60,7 +60,7 @@ const errorChecker = (error) => {
 const errorHandler = (error, res) => {
   const handledError = errorChecker(error);
 
-  return res.status(error.statusCode).json({
+  return res.status(error.statusCode || 500).json({
     status: handledError.status,
     errors: handledError.errors || [{ message: handledError.message }],
   });
