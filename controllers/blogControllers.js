@@ -28,6 +28,7 @@ export const getAllBlogByUser = async (req, res) => {
   }
 };
 
+// get detail blog
 export const getDetailBlog = async (req, res) => {
   try {
     const { id } = req.params;
@@ -61,6 +62,29 @@ export const createBlog = async (req, res) => {
     return res
       .status(201)
       .json({ message: "Blog created successfully", blog: newBlog });
+  } catch (error) {
+    errorHandler(error, res);
+  }
+};
+
+// get update blog
+export const updateBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { slug, title, content } = req.body;
+    const { userId } = req.user;
+
+    const updatedCount = await Blog.update(
+      { slug, title, content, updatedAt: new Date() },
+      { where: { id, userId } }
+    );
+
+    if (updatedCount > 0) {
+      const updatedBlog = await Blog.findByPk(id);
+      return res.json({ data: updatedBlog, message: "Success update Blog" });
+    } else {
+      throw new CustomError("Blog not Found", 400);
+    }
   } catch (error) {
     errorHandler(error, res);
   }
