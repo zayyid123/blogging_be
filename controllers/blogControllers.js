@@ -67,12 +67,18 @@ export const createBlog = async (req, res) => {
   }
 };
 
-// get update blog
+// update blog
 export const updateBlog = async (req, res) => {
   try {
     const { id } = req.params;
     const { slug, title, content } = req.body;
     const { userId } = req.user;
+
+    // check is user can update this data
+    const blog = await Blog.findOne({ where: { id } });
+    if (blog.userId !== userId) {
+      throw new CustomError("User can't update this blog", 400);
+    }
 
     const updatedCount = await Blog.update(
       { slug, title, content, updatedAt: new Date() },
@@ -82,6 +88,30 @@ export const updateBlog = async (req, res) => {
     if (updatedCount > 0) {
       const updatedBlog = await Blog.findByPk(id);
       return res.json({ data: updatedBlog, message: "Success update Blog" });
+    } else {
+      throw new CustomError("Blog not Found", 400);
+    }
+  } catch (error) {
+    errorHandler(error, res);
+  }
+};
+
+// delete blog
+export const deleteBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.user;
+
+    // check is user can delete this data
+    const blog = await Blog.findOne({ where: { id } });
+    if (blog.userId !== userId) {
+      throw new CustomError("User can't remove this blog", 400);
+    }
+
+    const deletedCount = await Blog.destroy({ where: { id, userId } });
+
+    if (deletedCount > 0) {
+      return res.json({ message: "Success delete Blog" });
     } else {
       throw new CustomError("Blog not Found", 400);
     }
