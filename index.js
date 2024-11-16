@@ -6,6 +6,7 @@ import sequelize from "./config/database.js";
 
 // routes
 import authRoutes from "./routes/authRoutes.js";
+import blogRoutes from "./routes/blogRoutes.js";
 
 const app = express();
 dotenv.config();
@@ -17,6 +18,7 @@ app.use(bodyParser.json());
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/blog", blogRoutes);
 
 // Sync Sequelize models with database (create tables if not exists)
 sequelize.sync().then(() => {
